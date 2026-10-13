@@ -93,11 +93,11 @@
 @custom-variant compact (@media (max-height: 768px));
 
 @font-face {
-  font-family: 'Collapse';
+  font-family: 'Rules Gothic Condensed';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('../../../node_modules/@nous-research/ui/dist/fonts/Collapse-Bold.woff2') format('woff2');
+  src: url('./fonts/RulesGothicCnd-Bold.woff2') format('woff2');
 }
 
 /* JetBrains Mono — bundled terminal font (Apache-2.0) so bold/italic share the
@@ -1950,7 +1950,7 @@ body.guest-pointer-lock :is(webview, iframe) {
    something a class-merge or a missed scan can quietly drop, leaving the
    wordmark rendered in body text. */
 .wordmark {
-  font-family: 'Collapse', var(--font-sans);
+  font-family: 'Rules Gothic Condensed', var(--font-sans);
   font-weight: 700;
   line-height: 0.9;
   text-transform: uppercase;
