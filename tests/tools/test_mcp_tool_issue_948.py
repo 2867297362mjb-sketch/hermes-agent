@@ -233,6 +233,25 @@ def test_bare_node_launchers_resolve_pm_node_ahead_of_the_users(tmp_path, monkey
     assert env["PATH"].split(os.pathsep) == [str(npm_bin), str(node_bin), str(user_bin), "/usr/bin"]
 
 
+def test_sealed_windows_payload_prefers_a_host_node_and_keeps_its_own_last(tmp_path, monkeypatch):
+    """cmd.exe cannot start a sealed Windows payload's node.exe, and npm starts every package
+    bin through cmd.exe: there a host Node wins, and the payload's dirs remain the fallback."""
+    import pm.user_facing
+
+    user_bin = _toolchain_bin(tmp_path / "user-node", "npx", "node")
+    npm_bin = _toolchain_bin(tmp_path / "store" / "npm" / "bin", "npx", "npm")
+    node_bin = _toolchain_bin(tmp_path / "store" / "node" / "bin", "node")
+    _pm_ships(monkeypatch, node_dirs=(npm_bin, node_bin))
+    monkeypatch.setattr(pm.user_facing, "applies", lambda: True)
+    sealed = {"node": [str(node_bin)], "npm": [str(npm_bin)]}
+    monkeypatch.setattr(pm.user_facing, "_sealed_dirs", lambda name: sealed.get(name, []))
+
+    command, env = _resolve_stdio_command("npx", {"PATH": os.pathsep.join([str(user_bin), "/usr/bin"])})
+
+    assert os.path.dirname(command) == str(user_bin)
+    assert env["PATH"].split(os.pathsep) == [str(user_bin), "/usr/bin", str(npm_bin), str(node_bin)]
+
+
 def test_bare_uvx_resolves_pm_uv_and_an_absolute_command_stays_the_users(tmp_path, monkeypatch):
     user_bin = _toolchain_bin(tmp_path / "user" / ".local" / "bin", "uvx")
     uv_dir = _toolchain_bin(tmp_path / "store" / "uv-0.1", "uv", "uvx")

@@ -261,6 +261,20 @@ def _managed_launcher(command: str) -> Optional[tuple[str, list[str]]]:
     return executable, dirs
 
 
+def _user_facing_node_launcher(launcher: str, managed: str, env: dict) -> tuple[str, dict]:
+    """*launcher* resolved on the user-facing PATH of a sealed Windows payload, else *managed*.
+
+    npm starts a package's bin through cmd.exe, and cmd.exe cannot start the payload's
+    ``node.exe`` (``pm.user_facing``). A host Node therefore comes first there.
+    """
+    from pm.user_facing import applies, user_facing_path
+
+    if not applies():
+        return managed, env
+    env = {**env, "PATH": user_facing_path(env.get("PATH", ""))}
+    return shutil.which(launcher, path=env["PATH"]) or managed, env
+
+
 def _is_hermes_managed_bin_dir(directory: str) -> bool:
     """True for the bin dirs Hermes' bootstrap prepends to this process's PATH: anything
     under the active hermes home (the sealed payload's venv, ``<home>/bin``, PM store
@@ -331,7 +345,8 @@ def _resolve_stdio_command(command: str, env: dict) -> tuple[str, dict]:
 
     Bare ``npx``/``npm``/``node``/``uv``/``uvx`` resolve to Hermes's PM-managed copies with their
     toolchain dirs first on the child PATH, never the user's (an absolute ``command:`` stays the
-    user's choice). Anything else resolves on the child env's PATH only: ``shutil.which`` with
+    user's choice), except that a sealed Windows payload prefers a host Node
+    (``_user_facing_node_launcher``). Anything else resolves on the child env's PATH only: ``shutil.which`` with
     ``path=None`` silently falls back to the PARENT's ``os.environ["PATH"]``, letting a command
     "resolve" against an env the child will never be spawned with. An absent child PATH is a
     miss; an explicitly empty one keeps its cwd-only meaning (same distinction the child's
@@ -346,6 +361,8 @@ def _resolve_stdio_command(command: str, env: dict) -> tuple[str, dict]:
         keys = {os.path.normcase(d) for d in dirs}
         rest = [p for p in resolved_env.get("PATH", "").split(os.pathsep) if p and os.path.normcase(p) not in keys]
         resolved_env["PATH"] = os.pathsep.join([*dirs, *rest])
+        if _MANAGED_LAUNCHERS[launcher] == "npm":
+            return _user_facing_node_launcher(launcher, resolved_command, resolved_env)
         return resolved_command, resolved_env
     if os.sep not in resolved_command:
         path_arg = resolved_env.get("PATH")

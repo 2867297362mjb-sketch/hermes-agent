@@ -314,6 +314,16 @@ def _sanitize_subprocess_env(base_env: dict | None, extra_env: dict | None = Non
                          _plugin_terminal_env_strip_keys(), lambda p: p)
 
 
+def _user_facing_env(env: dict) -> dict:
+    """*env* with the PATH a terminal command needs (``pm.user_facing``), for background spawns."""
+    from pm.user_facing import user_facing_path
+
+    path_key = _path_env_key(env)
+    if path_key is not None:
+        env[path_key] = user_facing_path(env[path_key])
+    return env
+
+
 def hermes_subprocess_env(
     *, inherit_credentials: bool = False, base_env: dict[str, str] | None = None
 ) -> dict[str, str]:
@@ -735,10 +745,12 @@ def _make_run_env(env: dict) -> dict:
     the LAUNCH profile's; under a routed home override its ``.env`` residue is dropped first
     (``strip_launch_profile_env``, a no-op for the launch profile) so the backend's own ``env``
     and the served profile's declared passthrough names are what the child sees."""
+    from pm.user_facing import user_facing_path
+
     run_env = _scrubbed_env(
         [(dict(strip_launch_profile_env(os.environ.copy()) | env), True)],
         frozenset(),
-        lambda p: _prepend_git_bash_dirs(_append_missing_sane_path_entries(p)),
+        lambda p: user_facing_path(_prepend_git_bash_dirs(_append_missing_sane_path_entries(p))),
     )
     # While this profile's Bot Desktop is running, its DISPLAY/XAUTHORITY/DBUS ride along so GUI
     # apps the agent launches from the terminal open on the Bot Screen the user is watching, not
