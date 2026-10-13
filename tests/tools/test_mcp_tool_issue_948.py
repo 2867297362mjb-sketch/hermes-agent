@@ -245,6 +245,7 @@ def test_sealed_windows_payload_prefers_a_host_node_and_keeps_its_own_last(tmp_p
     monkeypatch.setattr(pm.user_facing, "applies", lambda: True)
     sealed = {"node": [str(node_bin)], "npm": [str(npm_bin)]}
     monkeypatch.setattr(pm.user_facing, "_sealed_dirs", lambda name: sealed.get(name, []))
+    monkeypatch.setattr(pm.user_facing, "_copy_dirs", lambda name: [])
 
     command, env = _resolve_stdio_command("npx", {"PATH": os.pathsep.join([str(user_bin), "/usr/bin"])})
 
